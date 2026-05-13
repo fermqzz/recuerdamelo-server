@@ -2,9 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const webpush = require('web-push');
 
+const path = require('path');
+
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(express.static(path.join(__dirname)));
 
 // VAPID config — estas claves van también en las variables de entorno de Railway
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC;
