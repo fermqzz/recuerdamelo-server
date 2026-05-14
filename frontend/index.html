@@ -242,7 +242,7 @@ function hexAlpha(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slic
 async function initPush(){
   if(!('serviceWorker' in navigator)||!('PushManager' in window)) return;
   try{
-    const reg = await navigator.serviceWorker.register('/recuerdamelo-sw.js');
+    const reg = await navigator.serviceWorker.register('./recuerdamelo-sw.js');
     await navigator.serviceWorker.ready;
 
     const res = await fetch(`${SERVER_URL}/vapid-public`);
