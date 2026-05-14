@@ -279,13 +279,18 @@ async function syncNotifications(){
   const notifications=[];
   const now=new Date();
 
+  // Convierte hora local HH:MM a UTC HH:MM
+  function localToUtc(h,m){
+    const d=new Date();d.setHours(h,m,0,0);
+    return`${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
+  }
+
   // Tareas recurrentes — generar horas de notificación
   const SLOT_HOURS=[8,12,16,19,21];
   state.items.filter(i=>i.type==='tarea'&&!i.done&&i.recurrence).forEach(item=>{
     SLOT_HOURS.slice(0,item.recurrence).forEach(h=>{
-      const hh=String(h).padStart(2,'0');
       notifications.push({
-        time:`${hh}:00`,
+        time:localToUtc(h,0),
         title:'Recuérdamelo 🔔',
         body:item.title,
         tag:`tarea-${item.id}-${h}`
@@ -301,9 +306,8 @@ async function syncNotifications(){
     let notifMin=mm-30, notifH=hh;
     if(notifMin<0){notifMin+=60;notifH--;}
     if(notifH<0) return;
-    const timeStr=`${String(notifH).padStart(2,'0')}:${String(notifMin).padStart(2,'0')}`;
     notifications.push({
-      time:timeStr,
+      time:localToUtc(notifH,notifMin),
       title:`📅 En 30 min: ${item.title}`,
       body:item.date===todayStr?item.time:(item.date+' '+item.time),
       tag:`evento-${item.id}`
