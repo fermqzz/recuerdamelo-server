@@ -1,6 +1,3 @@
-// Service Worker — recuerdamelo-sw.js
-// Este archivo tiene que estar en la raíz de tu web en Netlify
-
 self.addEventListener('push', event => {
   if (!event.data) return;
 
@@ -13,8 +10,8 @@ self.addEventListener('push', event => {
 
   const options = {
     body: data.body || '',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    icon: './icon-192.png',
+    badge: './icon-192.png',
     tag: data.tag || 'recuerdame',
     renotify: true,
     requireInteraction: false,
@@ -35,7 +32,7 @@ self.addEventListener('notificationclick', event => {
           return client.focus();
         }
       }
-      if (clients.openWindow) return clients.openWindow('/');
+      if (clients.openWindow) return clients.openWindow(self.registration.scope);
     })
   );
 });
