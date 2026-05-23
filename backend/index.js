@@ -104,11 +104,11 @@ function generarIcal(eventos) {
 
   function rrule(recurrence, dateStr) {
     if (!recurrence || recurrence === 'puntual') return '';
-    if (recurrence === 'diario') return 'RRULE:FREQ=DAILY\r\n';
-    if (recurrence === 'anual') return 'RRULE:FREQ=YEARLY\r\n';
+    if (recurrence === 'diario') return 'RRULE:FREQ=DAILY';
+    if (recurrence === 'anual') return 'RRULE:FREQ=YEARLY';
     if (recurrence === 'semanal') {
       const diaSemana = new Date(dateStr + 'T12:00:00Z').getUTCDay();
-      return `RRULE:FREQ=WEEKLY;BYDAY=${DIAS_EN[diaSemana]}\r\n`;
+      return `RRULE:FREQ=WEEKLY;BYDAY=${DIAS_EN[diaSemana]}`;
     }
     return '';
   }
@@ -138,10 +138,10 @@ function generarIcal(eventos) {
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Recuérdamelo//ES',
+    'PRODID:-//Recuerdamelo//Recuerdamelo//ES',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    'X-WR-CALNAME:Recuérdamelo',
+    'X-WR-CALNAME:Recuerdamelo',
     ...vevents,
     'END:VCALENDAR',
   ].join('\r\n') + '\r\n';
