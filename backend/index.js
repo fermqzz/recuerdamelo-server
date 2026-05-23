@@ -96,10 +96,19 @@ function generarIcal(eventos) {
   const DIAS_EN = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
   function fechaUtc(dateStr, timeStr) {
-    // dateStr: 'YYYY-MM-DD', timeStr: 'HH:MM' (hora local del usuario, tratada como UTC)
     const [y, m, d] = dateStr.split('-');
     const [hh, mm] = (timeStr || '09:00').split(':');
     return `${y}${m}${d}T${hh}${mm}00Z`;
+  }
+
+  function dtstamp() {
+    const n = new Date();
+    const pad = v => String(v).padStart(2, '0');
+    return `${n.getUTCFullYear()}${pad(n.getUTCMonth()+1)}${pad(n.getUTCDate())}T${pad(n.getUTCHours())}${pad(n.getUTCMinutes())}${pad(n.getUTCSeconds())}Z`;
+  }
+
+  function escText(str) {
+    return str.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
   }
 
   function rrule(recurrence, dateStr) {
@@ -113,11 +122,11 @@ function generarIcal(eventos) {
     return '';
   }
 
+  const stamp = dtstamp();
   const vevents = eventos
     .filter(e => e.date)
     .map(e => {
       const dtstart = fechaUtc(e.date, e.time);
-      // DTEND = DTSTART + 1 hora
       const [y, m, d] = e.date.split('-');
       const [hh, mm] = (e.time || '09:00').split(':');
       const endH = String(parseInt(hh) + 1).padStart(2, '0');
@@ -126,10 +135,11 @@ function generarIcal(eventos) {
       return [
         'BEGIN:VEVENT',
         `UID:${e.id}@recuerdamelo`,
+        `DTSTAMP:${stamp}`,
         `DTSTART:${dtstart}`,
         `DTEND:${dtend}`,
-        `SUMMARY:${e.title}`,
-        e.notes ? `DESCRIPTION:${e.notes.replace(/\n/g, '\\n')}` : '',
+        `SUMMARY:${escText(e.title || '')}`,
+        e.notes ? `DESCRIPTION:${escText(e.notes)}` : '',
         rrule(e.recurrence, e.date),
         'END:VEVENT',
       ].filter(Boolean).join('\r\n');
