@@ -1,4 +1,4 @@
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+Para contexto sobre tecnologías, estructura del proyecto y decisiones de diseño,
+leer el plan de implementación en: specs/001-pwa-recordatorios/plan.md
 <!-- SPECKIT END -->

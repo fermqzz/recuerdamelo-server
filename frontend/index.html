@@ -113,6 +113,31 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .push-banner{background:var(--accent-light);border:1.5px solid var(--accent);border-radius:var(--radius-sm);padding:12px 16px;margin:12px 0;display:flex;align-items:center;gap:10px;cursor:pointer}
 .push-banner p{font-size:13px;font-weight:500;color:var(--accent);flex:1;line-height:1.4}
 .push-banner span{font-size:20px}
+/* Bloques de resumen en la vista Inicio */
+.summary-block{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.summary-block-title{font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--text3);text-transform:uppercase;margin-bottom:12px}
+.summary-empty{font-size:13px;color:var(--text3);text-align:center;padding:12px 0}
+.summary-task-item{font-size:14px;font-weight:500;color:var(--text);padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:10px}
+.summary-task-item:last-child{border-bottom:none}
+.summary-task-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+/* Botón Apple Calendar */
+.apple-cal-btn{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--white);color:var(--text2);font-size:12px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap}
+.apple-cal-btn:active{opacity:.7}
+/* Popup de día */
+.day-popup-overlay{position:absolute;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:200;display:flex;align-items:center;justify-content:center;padding:22px;opacity:0;pointer-events:none;transition:opacity .2s}
+.day-popup-overlay.open{opacity:1;pointer-events:all}
+.day-popup{background:var(--white);border-radius:var(--radius);padding:20px;width:100%;max-height:70vh;overflow-y:auto;transform:scale(.94);transition:transform .2s}
+.day-popup-overlay.open .day-popup{transform:scale(1)}
+.day-popup::-webkit-scrollbar{display:none}
+.day-popup-date{font-size:16px;font-weight:700;color:var(--text);margin-bottom:14px;letter-spacing:-.3px}
+.day-event-item{padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+.day-event-item:last-child{border-bottom:none}
+.day-event-item:active{opacity:.6}
+.day-event-stripe{width:4px;border-radius:2px;flex-shrink:0;align-self:stretch;min-height:28px}
+.day-event-body{flex:1;min-width:0}
+.day-event-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
+.day-event-meta{font-size:12px;color:var(--text2);display:flex;flex-wrap:wrap;gap:6px}
+.day-event-rec{font-size:11px;font-weight:600;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -126,13 +151,25 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
         <button class="header-btn" onclick="openCatManager()">⚙</button>
       </div>
     </div>
-    <div class="tabs-wrap"><div class="tabs" id="tabs-container"></div></div>
     <div class="content" id="home-content"></div>
   </div>
 
   <div id="view-calendar" class="view" style="display:none;flex-direction:column;height:100%">
-    <div class="header"><div class="header-top"><div class="app-title">Calendario</div></div></div>
+    <div class="header">
+      <div class="header-top">
+        <div class="app-title">Calendario</div>
+        <button class="apple-cal-btn" onclick="addToAppleCalendar()">📅 Apple Calendar</button>
+      </div>
+    </div>
     <div class="content" style="padding-top:16px" id="calendar-content"></div>
+  </div>
+
+  <!-- Popup de día del calendario -->
+  <div class="day-popup-overlay" id="day-popup-overlay" onclick="closeDayPopup(event)">
+    <div class="day-popup" id="day-popup">
+      <div class="day-popup-date" id="day-popup-date"></div>
+      <div id="day-popup-events"></div>
+    </div>
   </div>
 
   <div id="view-lists" class="view" style="display:none;flex-direction:column;height:100%">
@@ -176,6 +213,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       <div id="evento-fields">
         <div class="field"><label>Fecha</label><input type="date" id="input-date"></div>
         <div class="field"><label>Hora (opcional)</label><input type="time" id="input-time"></div>
+        <div class="field">
+          <label>Recurrencia</label>
+          <div class="recurrence-row">
+            <button class="rec-opt selected" data-erec="puntual" onclick="selectEventRec(this)">Una vez</button>
+            <button class="rec-opt" data-erec="diario" onclick="selectEventRec(this)">Diario</button>
+            <button class="rec-opt" data-erec="semanal" onclick="selectEventRec(this)">Semanal</button>
+            <button class="rec-opt" data-erec="anual" onclick="selectEventRec(this)">Anual</button>
+          </div>
+        </div>
         <div class="field"><label>Notas</label><textarea id="input-notes" placeholder="Detalles adicionales..."></textarea></div>
       </div>
       <div id="tarea-fields" style="display:none">
@@ -222,7 +268,7 @@ const SERVER_URL = 'https://recuerdamelo-server-production.up.railway.app'; // e
 
 const COLORS=['#0055ff','#ff3b30','#ff9500','#34c759','#af52de','#ff2d55','#5ac8fa','#ffcc00','#00c7be','#ff6b35'];
 const DAYS=['L','M','X','J','V','S','D'];
-let state=load(),currentView='home',activeTab='all',activeTaskTab='all',currentType='evento',selectedRec=1,calDate=new Date(),editingId=null;
+let state=load(),currentView='home',activeTab='all',activeTaskTab='all',currentType='evento',selectedRec=1,selectedEventRec='puntual',calDate=new Date(),editingId=null;
 let deviceId=localStorage.getItem('recuerdamelo_device_id');
 if(!deviceId){deviceId=Math.random().toString(36).slice(2,12);localStorage.setItem('recuerdamelo_device_id',deviceId);}
 
@@ -314,10 +360,15 @@ async function syncNotifications(){
     });
   });
 
+  // Eventos completos para el feed iCal
+  const events=state.items
+    .filter(i=>i.type==='evento'&&!i.done&&i.date)
+    .map(i=>({id:i.id,title:i.title,date:i.date,time:i.time||null,notes:i.notes||'',recurrence:i.recurrence||'puntual'}));
+
   try{
     await fetch(`${SERVER_URL}/notifications`,{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({id:deviceId, notifications})
+      body: JSON.stringify({id:deviceId, notifications, events})
     });
   } catch(e){
     console.warn('Sync error:', e);
@@ -346,31 +397,57 @@ function switchView(v){
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   const el=document.getElementById('view-'+v);el.style.display='flex';el.style.flexDirection='column';
   document.getElementById('nav-'+v).classList.add('active');
-  document.getElementById('fab').style.display=v==='calendar'?'none':'flex';
   if(v==='home')renderHome();if(v==='calendar')renderCalendar();if(v==='lists')renderLists();
 }
 
 function renderHome(){
   document.getElementById('header-date').textContent=fmtDate(new Date());
-  renderTabs();renderHomeContent();
-}
-function renderTabs(){
-  document.getElementById('tabs-container').innerHTML=[{id:'all',name:'Todo',color:'#0055ff'},...state.categories].map(c=>`<button class="tab ${activeTab===c.id?'active':''}" onclick="setTab('${c.id}')">${activeTab!==c.id?`<span class="tab-dot" style="background:${c.color}"></span>`:''} ${c.name}</button>`).join('');
-}
-function setTab(id){activeTab=id;renderTabs();renderHomeContent();}
-function renderHomeContent(){
   const today=new Date().toISOString().slice(0,10);
-  let evs=state.items.filter(i=>i.type==='evento');
-  let f=activeTab==='all'?evs:evs.filter(i=>i.catId===activeTab);
-  f.sort((a,b)=>(a.date||'9999')<(b.date||'9999')?-1:1);
-  const tod=f.filter(i=>!i.done&&i.date===today),up=f.filter(i=>!i.done&&i.date&&i.date>today),nd=f.filter(i=>!i.done&&!i.date),dn=f.filter(i=>i.done&&i.doneDate===today);
-  let h=pushBanner();
-  if(tod.length)h+='<div class="section-label">Hoy</div>'+tod.map(i=>eCard(i,true)).join('');
-  if(up.length)h+='<div class="section-label">Próximamente</div>'+up.map(i=>eCard(i,false)).join('');
-  if(nd.length)h+='<div class="section-label">Sin fecha</div>'+nd.map(i=>eCard(i,false)).join('');
-  if(dn.length)h+='<div class="section-label">Completado hoy</div>'+dn.map(i=>eCard(i,false)).join('');
-  if(!f.length&&!dn.length)h+=`<div class="empty"><div class="empty-icon">📋</div><p>Sin eventos pendientes.<br>Pulsa <strong>+</strong> para añadir uno.</p></div>`;
-  document.getElementById('home-content').innerHTML=h;
+  // Próximos 5 eventos ordenados por fecha
+  const proxEvs=state.items
+    .filter(i=>i.type==='evento'&&!i.done&&i.date&&i.date>=today)
+    .sort((a,b)=>a.date<b.date?-1:1)
+    .slice(0,5);
+  // Tareas activas pendientes
+  const tareasPend=state.items.filter(i=>i.type==='tarea'&&!i.done);
+
+  let evBlock='';
+  if(proxEvs.length){
+    evBlock=proxEvs.map(i=>{
+      const cat=getCat(i.catId);
+      const info=i.time?`${fmtShort(i.date)} · ${i.time}`:fmtShort(i.date);
+      return`<div class="card" onclick="openEditModal('${i.id}')">
+        <div class="card-stripe" style="background:${cat.color}"></div>
+        <div class="card-body"><div class="card-title">${i.title}</div>
+        <div class="card-meta"><span class="card-badge" style="background:${hexAlpha(cat.color,.13)};color:${cat.color}">${cat.name}</span><span class="card-info">${info}</span></div></div>
+        <div class="card-chevron">›</div></div>`;
+    }).join('');
+  } else {
+    evBlock=`<div class="summary-empty">Sin eventos próximos</div>`;
+  }
+
+  let tarBlock='';
+  if(tareasPend.length){
+    tarBlock=tareasPend.map(i=>{
+      const cat=getCat(i.catId);
+      return`<div class="summary-task-item" onclick="openEditModal('${i.id}')">
+        <div class="summary-task-dot" style="background:${cat.color}"></div>
+        <span>${i.title}</span></div>`;
+    }).join('');
+  } else {
+    tarBlock=`<div class="summary-empty">Sin tareas activas</div>`;
+  }
+
+  document.getElementById('home-content').innerHTML=`
+    ${pushBanner()}
+    <div class="summary-block">
+      <div class="summary-block-title">Próximos eventos</div>
+      ${evBlock}
+    </div>
+    <div class="summary-block">
+      <div class="summary-block-title">Tareas activas · ${tareasPend.length}</div>
+      ${tarBlock}
+    </div>`;
 }
 function eCard(item,urgent){
   const cat=getCat(item.catId);let info='';
@@ -422,18 +499,14 @@ function renderCalendar(){
     const isT=tod.getFullYear()===yr&&tod.getMonth()===mo&&tod.getDate()===d;
     const evs=evBD[ds]||[];
     const lbs=evs.slice(0,2).map(e=>{const cat=getCat(e.catId);return`<div class="cal-event-label" style="background:${hexAlpha(cat.color,.15)};color:${cat.color}">${e.title}</div>`;}).join('');
-    cells+=`<div class="cal-cell${isT?' today':''}"><div class="cal-day-num">${d}</div><div class="cal-event-labels">${lbs}</div></div>`;
+    cells+=`<div class="cal-cell${isT?' today':''}" onclick="openDayPopup('${ds}')"><div class="cal-day-num">${d}</div><div class="cal-event-labels">${lbs}</div></div>`;
   }
   const rem=(sdow+dim)%7;for(let d=1;d<=(rem?7-rem:0);d++)cells+=`<div class="cal-cell other-month"><div class="cal-day-num">${d}</div></div>`;
-  const mStr=`${yr}-${String(mo+1).padStart(2,'0')}`;
-  const mEvs=state.items.filter(i=>i.type==='evento'&&i.date&&i.date.startsWith(mStr)).sort((a,b)=>a.date<b.date?-1:1);
-  const todStr=new Date().toISOString().slice(0,10);
-  const evList=mEvs.length?'<div class="section-label" style="margin-top:20px">Este mes</div>'+mEvs.map(i=>eCard(i,i.date===todStr&&!i.done)).join(''):'';
   document.getElementById('calendar-content').innerHTML=`<div class="calendar-wrap">
     <div class="cal-header"><div class="cal-month">${mos[mo]} ${yr}</div>
     <div class="cal-nav"><button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button><button class="cal-nav-btn" onclick="changeMonth(1)">›</button></div></div>
     <div class="cal-days-header">${DAYS.map(d=>`<div class="cal-day-name">${d}</div>`).join('')}</div>
-    <div class="cal-grid">${cells}</div></div>${evList}`;
+    <div class="cal-grid">${cells}</div></div>`;
 }
 function changeMonth(d){calDate.setMonth(calDate.getMonth()+d);renderCalendar();}
 
@@ -445,8 +518,9 @@ function openAddModal(){
   document.getElementById('modal-title-text').textContent='Nuevo recordatorio';
   document.getElementById('type-row').style.display='flex';
   document.getElementById('btn-delete-item').style.display='none';
-  populateCatSelect();selectType('evento');selectedRec=1;
-  document.querySelectorAll('.rec-opt').forEach(b=>b.classList.toggle('selected',b.dataset.val==='1'));
+  populateCatSelect();selectType('evento');selectedRec=1;selectedEventRec='puntual';
+  document.querySelectorAll('.rec-opt[data-val]').forEach(b=>b.classList.toggle('selected',b.dataset.val==='1'));
+  document.querySelectorAll('.rec-opt[data-erec]').forEach(b=>b.classList.toggle('selected',b.dataset.erec==='puntual'));
   document.getElementById('add-modal').classList.add('open');
 }
 function openEditModal(id){
@@ -458,8 +532,17 @@ function openEditModal(id){
   document.getElementById('type-row').style.display='flex';
   document.getElementById('btn-delete-item').style.display='block';
   selectType(item.type);
-  if(item.type==='evento'){document.getElementById('input-date').value=item.date||'';document.getElementById('input-time').value=item.time||'';document.getElementById('input-notes').value=item.notes||'';}
-  else{selectedRec=item.recurrence||1;document.querySelectorAll('.rec-opt').forEach(b=>b.classList.toggle('selected',parseInt(b.dataset.val)===selectedRec));document.getElementById('input-notes-t').value=item.notes||'';}
+  if(item.type==='evento'){
+    document.getElementById('input-date').value=item.date||'';
+    document.getElementById('input-time').value=item.time||'';
+    document.getElementById('input-notes').value=item.notes||'';
+    selectedEventRec=item.recurrence||'puntual';
+    document.querySelectorAll('.rec-opt[data-erec]').forEach(b=>b.classList.toggle('selected',b.dataset.erec===selectedEventRec));
+  } else {
+    selectedRec=item.recurrence||1;
+    document.querySelectorAll('.rec-opt[data-val]').forEach(b=>b.classList.toggle('selected',parseInt(b.dataset.val)===selectedRec));
+    document.getElementById('input-notes-t').value=item.notes||'';
+  }
   document.getElementById('add-modal').classList.add('open');
 }
 function populateCatSelect(){document.getElementById('input-cat').innerHTML=state.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');}
@@ -479,11 +562,11 @@ function saveItem(){
   if(editingId){
     const idx=state.items.findIndex(i=>i.id===editingId);
     if(idx>=0)state.items[idx]={...state.items[idx],title,catId,type:currentType,
-      ...(currentType==='evento'?{date:document.getElementById('input-date').value||null,time:document.getElementById('input-time').value||null,notes:document.getElementById('input-notes').value,recurrence:null}
+      ...(currentType==='evento'?{date:document.getElementById('input-date').value||null,time:document.getElementById('input-time').value||null,notes:document.getElementById('input-notes').value,recurrence:selectedEventRec}
       :{recurrence:selectedRec,notes:document.getElementById('input-notes-t').value,date:null,time:null})};
   } else {
     const item={id:uid(),type:currentType,title,catId,done:false,createdAt:new Date().toISOString()};
-    if(currentType==='evento'){item.date=document.getElementById('input-date').value||null;item.time=document.getElementById('input-time').value||null;item.notes=document.getElementById('input-notes').value;}
+    if(currentType==='evento'){item.date=document.getElementById('input-date').value||null;item.time=document.getElementById('input-time').value||null;item.notes=document.getElementById('input-notes').value;item.recurrence=selectedEventRec;}
     else{item.recurrence=selectedRec;item.notes=document.getElementById('input-notes-t').value;}
     state.items.push(item);
   }
@@ -513,6 +596,92 @@ function deleteCat(id){
 }
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+
+// ── Selector de recurrencia de evento ──
+function selectEventRec(btn){
+  selectedEventRec=btn.dataset.erec;
+  document.querySelectorAll('.rec-opt[data-erec]').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+// ── Popup de día del Calendario ──
+const REC_LABELS={puntual:'Una vez',diario:'Diario',semanal:'Semanal',anual:'Anual'};
+function openDayPopup(dateStr){
+  const [y,m,d]=dateStr.split('-');
+  const fecha=new Date(dateStr+'T12:00:00');
+  const dias=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  document.getElementById('day-popup-date').textContent=`${dias[fecha.getDay()]}, ${parseInt(d)} de ${meses[fecha.getMonth()]} ${y}`;
+
+  const evs=state.items.filter(i=>i.type==='evento'&&i.date===dateStr);
+  let html='';
+  if(evs.length){
+    html=evs.map(ev=>{
+      const cat=getCat(ev.catId);
+      const rec=ev.recurrence&&ev.recurrence!=='puntual'?`<span class="day-event-rec">${REC_LABELS[ev.recurrence]||ev.recurrence}</span>`:'';
+      return`<div class="day-event-item" onclick="closeDayPopupAndEdit('${ev.id}')">
+        <div class="day-event-stripe" style="background:${cat.color}"></div>
+        <div class="day-event-body">
+          <div class="day-event-title">${ev.title}</div>
+          <div class="day-event-meta">
+            <span style="background:${hexAlpha(cat.color,.13)};color:${cat.color};font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">${cat.name}</span>
+            ${ev.time?`<span>${ev.time}</span>`:''}
+            ${rec}
+          </div>
+          ${ev.notes?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${ev.notes}</div>`:''}
+        </div></div>`;
+    }).join('');
+  } else {
+    html='<div class="summary-empty">Sin eventos este día</div>';
+  }
+  document.getElementById('day-popup-events').innerHTML=html;
+  document.getElementById('day-popup-overlay').classList.add('open');
+}
+function closeDayPopup(e){
+  // Cierra solo si se pulsa el overlay (fondo), no el popup en sí
+  if(e&&e.target!==document.getElementById('day-popup-overlay')) return;
+  document.getElementById('day-popup-overlay').classList.remove('open');
+}
+function closeDayPopupAndEdit(id){
+  document.getElementById('day-popup-overlay').classList.remove('open');
+  openEditModal(id);
+}
+
+// ── Botón Apple Calendar ──
+async function addToAppleCalendar(){
+  try{
+    const res=await fetch(`${SERVER_URL}/ical-setup`);
+    const {url}=await res.json();
+    window.location.href=url;
+  } catch(e){
+    showToast('Error al obtener la URL del calendario');
+  }
+}
+
+// ── Swipe-to-dismiss en el modal de creación/edición ──
+(function(){
+  const overlay=document.getElementById('add-modal');
+  const modal=overlay.querySelector('.modal');
+  let startY=0;
+  modal.addEventListener('touchstart',e=>{
+    startY=e.touches[0].clientY;
+    modal.style.transition='none';
+  },{passive:true});
+  modal.addEventListener('touchmove',e=>{
+    const delta=e.touches[0].clientY-startY;
+    if(delta>0) modal.style.transform=`translateY(${delta}px)`;
+  },{passive:true});
+  modal.addEventListener('touchend',e=>{
+    const delta=e.changedTouches[0].clientY-startY;
+    modal.style.transition='transform .25s';
+    if(delta>80){
+      closeModal('add-modal');
+      modal.style.transform='';
+    } else {
+      modal.style.transform='';
+    }
+  });
+})();
 
 renderHome();
 document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});});
